@@ -4,7 +4,7 @@ from config import API_ID, API_HASH, BOT_TOKEN
 from facebook_creator import FacebookCreator
 
 async def main():
-    bot = TelegramClient('fb_bot', API_ID, API_HASH).start(bot_token=BOT_TOKEN)
+    bot = await TelegramClient('fb_bot', API_ID, API_HASH).start(bot_token=BOT_TOKEN)
 
     @bot.on(events.NewMessage(pattern='/start'))
     async def start(event):

@@ -5,6 +5,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.options import Options
+from selenium.common.exceptions import TimeoutException
 import random
 import time
 import string
@@ -42,10 +43,10 @@ class FacebookCreator:
         return random.choice(first), random.choice(last)
 
     def _generate_dob(self):
-        year = random.randint(1985, 2005)
         month = random.randint(1, 12)
         day = random.randint(1, 28)
-        return f"{month}/{day}/{year}"
+        year = random.randint(1985, 2005)
+        return month, day, year
 
     def _generate_password(self):
         chars = string.ascii_letters + string.digits + "!@#$%^&*"
@@ -60,66 +61,72 @@ class FacebookCreator:
         return f"+1{random.randint(200, 999)}{random.randint(1000000, 9999999)}"
 
     def create_account(self):
-        self._setup_driver()
-        wait = WebDriverWait(self.driver, 20)
-        self.driver.get(FB_SIGNUP_URL)
-        time.sleep(random.uniform(1, 3))
+        try:
+            self._setup_driver()
+            wait = WebDriverWait(self.driver, 20)
+            self.driver.get(FB_SIGNUP_URL)
+            time.sleep(random.uniform(1, 3))
 
-        first, last = self._generate_name()
-        password = self._generate_password()
-        dob = self._generate_dob()
+            first, last = self._generate_name()
+            password = self._generate_password()
+            month, day, year = self._generate_dob()
+            dob_str = f"{month}/{day}/{year}"
 
-        use_email = random.choice([True, False])
-        if use_email:
-            login_cred = self._generate_email()
-        else:
-            login_cred = self._generate_phone()
+            use_email = random.choice([True, False])
+            if use_email:
+                login_cred = self._generate_email()
+            else:
+                login_cred = self._generate_phone()
 
-        first_name_field = wait.until(EC.presence_of_element_located((By.NAME, "firstname")))
-        first_name_field.send_keys(first)
+            first_name_field = wait.until(EC.presence_of_element_located((By.NAME, "firstname")))
+            first_name_field.send_keys(first)
 
-        last_name_field = self.driver.find_element(By.NAME, "lastname")
-        last_name_field.send_keys(last)
+            last_name_field = self.driver.find_element(By.NAME, "lastname")
+            last_name_field.send_keys(last)
 
-        email_field = self.driver.find_element(By.NAME, "reg_email__")
-        email_field.send_keys(login_cred)
+            email_field = self.driver.find_element(By.NAME, "reg_email__")
+            email_field.send_keys(login_cred)
 
-        password_field = self.driver.find_element(By.NAME, "reg_passwd__")
-        password_field.send_keys(password)
+            password_field = self.driver.find_element(By.NAME, "reg_passwd__")
+            password_field.send_keys(password)
 
-        dob_parts = dob.split('/')
-        month_dropdown = self.driver.find_element(By.ID, "month")
-        month_dropdown.click()
-        month_option = self.driver.find_element(By.XPATH, f"//option[@value='{dob_parts[0]}']")
-        month_option.click()
+            month_dropdown = wait.until(EC.element_to_be_clickable((By.ID, "month")))
+            month_dropdown.click()
+            month_option = wait.until(EC.element_to_be_clickable((By.XPATH, f"//option[@value='{month}']")))
+            month_option.click()
 
-        day_dropdown = self.driver.find_element(By.ID, "day")
-        day_dropdown.click()
-        day_option = self.driver.find_element(By.XPATH, f"//option[@value='{dob_parts[1]}']")
-        day_option.click()
+            day_dropdown = wait.until(EC.element_to_be_clickable((By.ID, "day")))
+            day_dropdown.click()
+            day_option = wait.until(EC.element_to_be_clickable((By.XPATH, f"//option[@value='{day}']")))
+            day_option.click()
 
-        year_dropdown = self.driver.find_element(By.ID, "year")
-        year_dropdown.click()
-        year_option = self.driver.find_element(By.XPATH, f"//option[@value='{dob_parts[2]}']")
-        year_option.click()
+            year_dropdown = wait.until(EC.element_to_be_clickable((By.ID, "year")))
+            year_dropdown.click()
+            year_option = wait.until(EC.element_to_be_clickable((By.XPATH, f"//option[@value='{year}']")))
+            year_option.click()
 
-        gender = random.choice(['2', '1'])
-        gender_button = self.driver.find_element(By.XPATH, f"//input[@value='{gender}']")
-        gender_button.click()
+            gender = random.choice(['2', '1'])
+            gender_button = self.driver.find_element(By.XPATH, f"//input[@value='{gender}']")
+            gender_button.click()
 
-        submit_button = self.driver.find_element(By.NAME, "websubmit")
-        submit_button.click()
+            submit_button = self.driver.find_element(By.NAME, "websubmit")
+            submit_button.click()
 
-        time.sleep(3)
+            time.sleep(3)
 
-        self.account_data = {
-            "login": login_cred,
-            "password": password,
-            "dob": dob,
-            "type": "email" if use_email else "phone"
-        }
+            self.account_data = {
+                "login": login_cred,
+                "password": password,
+                "dob": dob_str,
+                "type": "email" if use_email else "phone"
+            }
 
-        return self.account_data
+            return self.account_data
+
+        except Exception as e:
+            if self.driver:
+                self.driver.quit()
+            raise Exception(f"Account creation failed: {str(e)}")
 
     def close(self):
         if self.driver:

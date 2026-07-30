@@ -3,17 +3,29 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.options import Options
 import random
 import time
 import string
+import os
 from config import PROXY, HEADLESS, EMAIL_DOMAINS, FB_SIGNUP_URL
 
 class FacebookCreator:
     def __init__(self):
         self.driver = None
         self.account_data = {}
+
+    def _get_chrome_path(self):
+        possible_paths = [
+            '/usr/bin/google-chrome',
+            '/usr/bin/chromium',
+            '/usr/bin/chromium-browser',
+            '/opt/google/chrome/chrome'
+        ]
+        for path in possible_paths:
+            if os.path.exists(path):
+                return path
+        return None
 
     def _setup_driver(self):
         options = Options()
@@ -22,7 +34,6 @@ class FacebookCreator:
             options.add_argument('--no-sandbox')
             options.add_argument('--disable-dev-shm-usage')
             options.add_argument('--disable-gpu')
-            options.add_argument('--remote-debugging-port=9222')
         options.add_argument('--disable-blink-features=AutomationControlled')
         options.add_experimental_option("excludeSwitches", ["enable-automation"])
         options.add_experimental_option('useAutomationExtension', False)
@@ -36,6 +47,12 @@ class FacebookCreator:
         options.add_argument(f'user-agent={random.choice(user_agents)}')
         if PROXY:
             options.add_argument(f'--proxy-server={PROXY}')
+        
+        chrome_path = self._get_chrome_path()
+        if chrome_path:
+            options.binary_location = chrome_path
+        
+        from webdriver_manager.chrome import ChromeDriverManager
         service = Service(ChromeDriverManager().install())
         self.driver = webdriver.Chrome(service=service, options=options)
         self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")

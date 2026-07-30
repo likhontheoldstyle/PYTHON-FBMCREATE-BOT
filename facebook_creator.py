@@ -5,7 +5,6 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.options import Options
-from selenium.common.exceptions import TimeoutException
 import random
 import time
 import string
@@ -17,6 +16,7 @@ class FacebookCreator:
         self.account_data = {}
 
     def _setup_driver(self):
+        print("🔄 Setting up driver...")
         options = Options()
         if HEADLESS:
             options.add_argument('--headless')
@@ -36,6 +36,7 @@ class FacebookCreator:
         service = Service(ChromeDriverManager().install())
         self.driver = webdriver.Chrome(service=service, options=options)
         self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+        print("✅ Driver ready.")
 
     def _generate_name(self):
         first = ['John','Emma','Michael','Sophia','James','Olivia','William','Ava','David','Mia']
@@ -46,6 +47,7 @@ class FacebookCreator:
         month = random.randint(1, 12)
         day = random.randint(1, 28)
         year = random.randint(1985, 2005)
+        print(f"📅 Generated DOB: {month}/{day}/{year}")
         return month, day, year
 
     def _generate_password(self):
@@ -62,9 +64,11 @@ class FacebookCreator:
 
     def create_account(self):
         try:
+            print("🚀 Starting account creation...")
             self._setup_driver()
             wait = WebDriverWait(self.driver, 20)
             self.driver.get(FB_SIGNUP_URL)
+            print("📄 Page loaded.")
             time.sleep(random.uniform(1, 3))
 
             first, last = self._generate_name()
@@ -75,40 +79,51 @@ class FacebookCreator:
             use_email = random.choice([True, False])
             if use_email:
                 login_cred = self._generate_email()
+                print(f"📧 Using email: {login_cred}")
             else:
                 login_cred = self._generate_phone()
+                print(f"📱 Using phone: {login_cred}")
 
+            print("✏️ Filling first name...")
             first_name_field = wait.until(EC.presence_of_element_located((By.NAME, "firstname")))
             first_name_field.send_keys(first)
 
+            print("✏️ Filling last name...")
             last_name_field = self.driver.find_element(By.NAME, "lastname")
             last_name_field.send_keys(last)
 
+            print("✏️ Filling email/phone...")
             email_field = self.driver.find_element(By.NAME, "reg_email__")
             email_field.send_keys(login_cred)
 
+            print("✏️ Filling password...")
             password_field = self.driver.find_element(By.NAME, "reg_passwd__")
             password_field.send_keys(password)
 
+            print("📅 Selecting month...")
             month_dropdown = wait.until(EC.element_to_be_clickable((By.ID, "month")))
             month_dropdown.click()
             month_option = wait.until(EC.element_to_be_clickable((By.XPATH, f"//option[@value='{month}']")))
             month_option.click()
 
+            print("📅 Selecting day...")
             day_dropdown = wait.until(EC.element_to_be_clickable((By.ID, "day")))
             day_dropdown.click()
             day_option = wait.until(EC.element_to_be_clickable((By.XPATH, f"//option[@value='{day}']")))
             day_option.click()
 
+            print("📅 Selecting year...")
             year_dropdown = wait.until(EC.element_to_be_clickable((By.ID, "year")))
             year_dropdown.click()
             year_option = wait.until(EC.element_to_be_clickable((By.XPATH, f"//option[@value='{year}']")))
             year_option.click()
 
+            print("⚧️ Selecting gender...")
             gender = random.choice(['2', '1'])
             gender_button = self.driver.find_element(By.XPATH, f"//input[@value='{gender}']")
             gender_button.click()
 
+            print("📨 Submitting form...")
             submit_button = self.driver.find_element(By.NAME, "websubmit")
             submit_button.click()
 
@@ -121,9 +136,11 @@ class FacebookCreator:
                 "type": "email" if use_email else "phone"
             }
 
+            print("✅ Account data collected.")
             return self.account_data
 
         except Exception as e:
+            print(f"❌ Error: {e}")
             if self.driver:
                 self.driver.quit()
             raise Exception(f"Account creation failed: {str(e)}")
